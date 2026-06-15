@@ -1,0 +1,72 @@
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+  <div class="card shadow" style="width: 400px">
+    <div class="card-body p-4">
+
+      <h4 class="card-title text-center mb-4">Sign In</h4>
+
+      @if (errorMessage) {
+        <div class="alert alert-danger">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input
+            type="text"
+            class="form-control"
+            [class.is-invalid]="f['username'].invalid && f['username'].touched"
+            formControlName="username"
+            placeholder="Enter your username"
+          />
+          <div class="invalid-feedback">
+            @if (f['username'].errors?.['required']) {
+              <span>Username is required</span>
+            }
+            @if (f['username'].errors?.['minlength']) {
+              <span>Min 3 characters</span>
+            }
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            [class.is-invalid]="f['password'].invalid && f['password'].touched"
+            formControlName="password"
+            placeholder="••••••"
+          />
+          <div class="invalid-feedback">
+            @if (f['password'].errors?.['required']) {
+              <span>Password is required</span>
+            }
+            @if (f['password'].errors?.['minlength']) {
+              <span>Min 6 characters</span>
+            }
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary w-100"
+          [disabled]="loginForm.invalid || isLoading"
+        >
+          @if (isLoading) {
+            <span class="spinner-border spinner-border-sm me-2"></span>
+          }
+          {{ isLoading ? 'Signing in...' : 'Sign In' }}
+        </button>
+
+      </form>
+
+      <p class="text-center mt-3 mb-0">
+        No account? <a routerLink="/register">Register</a>
+      </p>
+
+    </div>
+  </div>
+</div>
