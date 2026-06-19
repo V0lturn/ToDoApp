@@ -15,9 +15,6 @@ namespace ToDoApp.Domain.Entities
         [Required]
         public int UserId { get; set; }
 
-        [ForeignKey(nameof(UserId))]
-        public User? User { get; set; }
-
         public ICollection<TodoTask> Tasks { get; set; } = new List<TodoTask>();
     }
 }

@@ -36,7 +36,7 @@ namespace ToDoApp.Infrastructure.Data
 
             // Change cascading delete to NoAction to break a conflict cycle in SQL Server
             modelBuilder.Entity<Category>()
-                .HasOne(c => c.User)
+                .HasOne<User>()
                 .WithMany(u => u.Categories)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.NoAction);

@@ -21,7 +21,7 @@ namespace ToDoApp.Core.Services
             var task = new TodoTask
             {
                 Title = dto.Title,
-                Description = dto.Description,
+                Description = dto.Description ?? string.Empty,
                 DueDate = dto.DueDate,
                 CategoryId = dto.CategoryId,
                 UserId = userId,

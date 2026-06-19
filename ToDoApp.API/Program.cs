@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ToDoApp.API.Core.Interfaces;
 using ToDoApp.API.Core.Services;
+using ToDoApp.API.Infrastructure.Repositories.Implementations;
+using ToDoApp.API.Infrastructure.Repositories.Interfaces;
 using ToDoApp.Core.Interfaces;
 using ToDoApp.Core.Services;
 using ToDoApp.Domain.Entities;
@@ -45,8 +47,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // DI
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
-builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 // CORS for Angular
 builder.Services.AddCors(options =>

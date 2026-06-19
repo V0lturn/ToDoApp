@@ -4,7 +4,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { TaskService } from '../../../core/services/task.service'; 
+import { CategoryService } from '../../../core/services/category.service';
 import { TaskDto } from '../../../shared/models/task.model'; 
+import { CategoryDto } from '../../../shared/models/category.model';
 
 @Component({
   selector: 'app-task-list',
@@ -17,19 +19,25 @@ export class  TaskListComponent implements OnInit {
   username: string | null = '';
   tasks: TaskDto[] = [];
   
-  // Modal window (Form) states
+  // Loading and submitting states
   isLoading = false;
   isSubmitting = false;
 
-  // Состояния модального окна (Формы)
+  // Modal window (Form) states
   taskForm: FormGroup;
   isChecklistMode = false;
   isEditMode = false;
   editingTaskId: number | null = null;
 
+  // User and list data
+  categories: CategoryDto[] = [];
+  selectedCategoryId: number | null = null; 
+  isAddingCategory = false;
+
   constructor(
     private authService: AuthService, 
     private taskService: TaskService,
+    private categoryService: CategoryService,
     private router: Router,
     private fb: FormBuilder,
     private cdr: ChangeDetectorRef
@@ -38,6 +46,7 @@ export class  TaskListComponent implements OnInit {
       title: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
       dueDate: [''],
+      categoryId: [null],
       checklistItems: this.fb.array([])
     });
   }
@@ -45,6 +54,7 @@ export class  TaskListComponent implements OnInit {
   ngOnInit(): void {
     this.username = localStorage.getItem('todo_user');
     this.loadTasks();
+    this.loadCategories();
   }
 
   // ==========================================
@@ -54,6 +64,13 @@ export class  TaskListComponent implements OnInit {
   get checklistItems(): FormArray {
     return this.taskForm.get('checklistItems') as FormArray;
   }
+
+  get filteredTasks(): TaskDto[] {
+  if (this.selectedCategoryId === null) {
+    return this.tasks;
+  }
+  return this.tasks.filter(t => t.categoryId === this.selectedCategoryId);
+}
 
   setMode(isChecklist: boolean): void {
     this.isChecklistMode = isChecklist;
@@ -106,13 +123,22 @@ export class  TaskListComponent implements OnInit {
     });
   }
 
+  loadCategories(): void {
+  this.categoryService.getCategories().subscribe({
+    next: (data) => {
+      this.categories = data || [];
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.error('Error fetching categories', err)
+  });
+}
+
   openCreateModal(): void {
     this.isEditMode = false;
     this.editingTaskId = null;
     this.isChecklistMode = false;
-    this.taskForm.reset();
+    this.taskForm.reset({ title: '', description: '', dueDate: '', categoryId: null });
     this.checklistItems.clear();
-
     this.openModalWindow();
   }
 
@@ -133,10 +159,18 @@ export class  TaskListComponent implements OnInit {
           done: [item.done]
         }));
       });
-      this.taskForm.patchValue({ title: task.title, description: '', dueDate: formattedDate });
+      this.taskForm.patchValue({ 
+        title: task.title, 
+        description: '', 
+        dueDate: formattedDate, 
+        categoryId: task.categoryId });
     } else {
       this.isChecklistMode = false;
-      this.taskForm.patchValue({ title: task.title, description: info.text, dueDate: formattedDate });
+      this.taskForm.patchValue({ 
+        title: task.title, 
+        description: info.text, 
+        dueDate: formattedDate, 
+        categoryId: task.categoryId });
     }
 
     this.openModalWindow();
@@ -163,7 +197,8 @@ export class  TaskListComponent implements OnInit {
         title: formValue.title,
         description: finalDescription,
         isCompleted: currentTask ? currentTask.isCompleted : false,
-        dueDate: formValue.dueDate ? formValue.dueDate : null
+        dueDate: formValue.dueDate ? formValue.dueDate : null,
+        categoryId: formValue.categoryId ? formValue.categoryId : null
       };
 
       this.taskService.updateTask(this.editingTaskId, payload).subscribe({
@@ -185,7 +220,8 @@ export class  TaskListComponent implements OnInit {
       const payload = { 
         title: formValue.title, 
         description: finalDescription ? finalDescription : '',
-        dueDate: formValue.dueDate ? formValue.dueDate : null 
+        dueDate: formValue.dueDate ? formValue.dueDate : null,
+        categoryId: formValue.categoryId ? formValue.categoryId : null 
       };
       this.taskService.createTask(payload).subscribe({
         next: (newTask) => {
@@ -215,7 +251,9 @@ export class  TaskListComponent implements OnInit {
       const updatedTaskPayload = {
         title: task.title,
         description: updatedDescription,
-        isCompleted: task.isCompleted
+        isCompleted: task.isCompleted,
+        dueDate: task.dueDate,      
+        categoryId: task.categoryId   
       };
 
       const index = this.tasks.findIndex(t => t.id === task.id);
@@ -246,7 +284,8 @@ export class  TaskListComponent implements OnInit {
       title: task.title,
       description: task.description,
       isCompleted: newCompletionStatus,
-      dueDate: task.dueDate
+      dueDate: task.dueDate,
+      categoryId: task.categoryId
     };
 
     const index = this.tasks.findIndex(t => t.id === task.id);
@@ -288,6 +327,19 @@ export class  TaskListComponent implements OnInit {
       });
     }
 }
+
+  onAddCategoryDirect(name: string): void {
+    if (!name || name.trim().length < 2) return;
+
+    this.categoryService.createCategory({ name: name.trim() }).subscribe({
+      next: (newCat) => {
+        this.categories.push(newCat);
+        this.isAddingCategory = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error creating category', err)
+    });
+  }
 
   // ==========================================
   // INTERFACE HELPERS (UI METHODS)
