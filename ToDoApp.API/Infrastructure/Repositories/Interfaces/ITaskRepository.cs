@@ -8,5 +8,6 @@ namespace ToDoApp.Infrastructure.Repositories.Interfaces
         Task<TodoTask> CreateAsync(TodoTask task);
         Task<IEnumerable<TodoTask>> GetTasksByUserIdAsync(int userId);
         Task<TodoTask?> UpdateAsync(TodoTask task);
+        Task<bool> DeleteAsync(TodoTask task);
     }
 }

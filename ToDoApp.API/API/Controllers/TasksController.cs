@@ -93,5 +93,26 @@ namespace ToDoApp.API.API.Controllers
 
             return Ok(result);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
+
+            int userId = int.Parse(userIdClaim.Value);
+
+            var isDeleted = await _taskService.DeleteTaskAsync(id, userId);
+
+            if (!isDeleted)
+            {
+                return NotFound(new { message = $"Task with ID {id} not found or access denied." });
+            }
+
+            return NoContent();
+        }
     }
 }

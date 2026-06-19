@@ -110,5 +110,15 @@ namespace ToDoApp.Core.Services
                 CategoryName = updated.Category?.Name
             };
         }
+
+        public async Task<bool> DeleteTaskAsync(int id, int userId)
+        {
+            var task = await _taskRepository.GetByIdAsync(id, userId);
+
+            if (task is null)
+                return false;
+
+            return await _taskRepository.DeleteAsync(task);
+        }
     }
 }

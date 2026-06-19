@@ -269,6 +269,26 @@ export class  TaskListComponent implements OnInit {
     });
   }
 
+  onDeleteTask(id: number): void {
+    if (confirm('Are you sure you want to delete this task?')) {
+      const originalTasks = [...this.tasks];
+      this.tasks = this.tasks.filter(t => t.id !== id);
+      this.cdr.detectChanges();
+
+      this.taskService.deleteTask(id).subscribe({
+        next: () => {
+          console.log(`Task ${id} deleted successfully`);
+        },
+        error: (err) => {
+          console.error('Error deleting task', err);
+          this.tasks = originalTasks;
+          this.cdr.detectChanges();
+          alert('Failed to delete the task. Rolled back.');
+        }
+      });
+    }
+}
+
   // ==========================================
   // INTERFACE HELPERS (UI METHODS)
   // ==========================================

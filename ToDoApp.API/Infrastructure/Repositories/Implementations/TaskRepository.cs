@@ -43,5 +43,12 @@ namespace ToDoApp.Infrastructure.Repositories.Implementations
             await _context.SaveChangesAsync();
             return task;
         }
+
+        public async Task<bool> DeleteAsync(TodoTask task)
+        {
+            _context.Tasks.Remove(task);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

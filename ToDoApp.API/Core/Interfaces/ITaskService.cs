@@ -9,5 +9,6 @@ namespace ToDoApp.Core.Interfaces
         Task<TaskResponseDto> CreateTaskAsync(CreateTaskDto dto, int userId);
         Task<IEnumerable<TaskResponseDto>> GetUserTasksAsync(int userId);
         Task<TaskResponseDto?> UpdateTaskAsync(int id, UpdateTaskDto dto, int userId);
+        Task<bool> DeleteTaskAsync(int id, int userId);
     }
 }
