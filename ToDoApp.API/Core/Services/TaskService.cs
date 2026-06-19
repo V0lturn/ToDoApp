@@ -1,4 +1,5 @@
-﻿using ToDoApp.Core.DTOs;
+﻿using ToDoApp.API.Core.DTOs.Task;
+using ToDoApp.Core.DTOs;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
 using ToDoApp.Domain.Entities;
@@ -77,6 +78,37 @@ namespace ToDoApp.Core.Services
                 CategoryId = t.CategoryId,
                 CategoryName = t.Category?.Name
             });
+        }
+
+        public async Task<TaskResponseDto?> UpdateTaskAsync(int id, UpdateTaskDto dto, int userId)
+        {
+            var task = await _taskRepository.GetByIdAsync(id, userId);
+
+            if (task is null)
+                return null;
+
+            task.Title = dto.Title;
+            task.Description = dto.Description;
+            task.IsCompleted = dto.IsCompleted;
+            task.DueDate = dto.DueDate;
+            task.CategoryId = dto.CategoryId;
+
+            var updated = await _taskRepository.UpdateAsync(task);
+
+            if (updated is null)
+                return null;
+
+            return new TaskResponseDto
+            {
+                Id = updated.Id,
+                Title = updated.Title,
+                Description = updated.Description,
+                IsCompleted = updated.IsCompleted,
+                CreatedAt = updated.CreatedAt,
+                DueDate = updated.DueDate,
+                CategoryId = updated.CategoryId,
+                CategoryName = updated.Category?.Name
+            };
         }
     }
 }

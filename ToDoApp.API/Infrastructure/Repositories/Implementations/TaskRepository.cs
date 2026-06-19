@@ -36,5 +36,12 @@ namespace ToDoApp.Infrastructure.Repositories.Implementations
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<TodoTask?> UpdateAsync(TodoTask task)
+        {
+            _context.Tasks.Update(task);
+            await _context.SaveChangesAsync();
+            return task;
+        }
     }
 }

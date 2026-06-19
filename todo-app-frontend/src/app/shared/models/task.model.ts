@@ -15,3 +15,11 @@ export interface CreateTaskDto {
   dueDate?: string;
   categoryId?: number;
 }
+
+export interface UpdateTaskDto {
+  title: string;
+  description: string;
+  isCompleted: boolean;
+  dueDate?: string;
+  categoryId?: number;
+}

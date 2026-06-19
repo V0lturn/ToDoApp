@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using ToDoApp.API.Core.DTOs.Task;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
-using ToDoApp.Domain.Entities;
 
 namespace ToDoApp.API.API.Controllers
 {
@@ -71,6 +71,27 @@ namespace ToDoApp.API.API.Controllers
             }
 
             return Ok(task);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<TaskResponseDto>> Update(int id, [FromBody] UpdateTaskDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
+
+            int userId = int.Parse(userIdClaim.Value);
+
+            var result = await _taskService.UpdateTaskAsync(id, dto, userId);
+
+            if (result is null)
+            {
+                return NotFound(new { message = $"Task with ID {id} not found or access denied." });
+            }
+
+            return Ok(result);
         }
     }
 }

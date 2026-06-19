@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router} from '@angular/router';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,15 +12,20 @@ import { TaskDto } from '../../../shared/models/task.model';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './task-list.component.html'
 })
-
-export class TaskListComponent implements OnInit {
+export class  TaskListComponent implements OnInit {
+  // User and list data
   username: string | null = '';
   tasks: TaskDto[] = [];
+  
+  // Modal window (Form) states
   isLoading = false;
-
-  taskForm: FormGroup;
   isSubmitting = false;
+
+  // Состояния модального окна (Формы)
+  taskForm: FormGroup;
   isChecklistMode = false;
+  isEditMode = false;
+  editingTaskId: number | null = null;
 
   constructor(
     private authService: AuthService, 
@@ -32,6 +37,7 @@ export class TaskListComponent implements OnInit {
     this.taskForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
+      dueDate: [''],
       checklistItems: this.fb.array([])
     });
   }
@@ -40,6 +46,10 @@ export class TaskListComponent implements OnInit {
     this.username = localStorage.getItem('todo_user');
     this.loadTasks();
   }
+
+  // ==========================================
+  // GETTERS AND FORM SERVICE METHODS
+  // ==========================================
 
   get checklistItems(): FormArray {
     return this.taskForm.get('checklistItems') as FormArray;
@@ -66,64 +76,6 @@ export class TaskListComponent implements OnInit {
     this.checklistItems.removeAt(index);
   }
 
-  loadTasks(): void {
-    this.isLoading = true;
-    this.taskService.getTasks().subscribe({
-      next: (data) => {
-        this.tasks = data;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error fetching tasks', err);
-        this.isLoading = false;
-      }
-    });
-  }
-
-onAddTask(): void {
-    if (this.taskForm.invalid) return;
-
-    this.isSubmitting = true;
-
-    const formValue = this.taskForm.value;
-    let finalDescription = formValue.description;
-
-    if (this.isChecklistMode) {
-      finalDescription = JSON.stringify({
-        type: 'checklist',
-        items: formValue.checklistItems
-      });
-    }
-
-    const payload = {
-      title: formValue.title,
-      description: finalDescription
-    };
-
-    this.taskService.createTask(payload).subscribe({
-      next: (newTask) => {
-        this.tasks.unshift(newTask); 
-        this.taskForm.reset();
-        this.checklistItems.clear();
-        this.isChecklistMode = false;
-        this.isSubmitting = false;
-
-        const modalElement = document.getElementById('addTaskModal');
-        if (modalElement) {
-          const bootstrapModal = (window as any).bootstrap.Modal.getInstance(modalElement);
-          if (bootstrapModal) bootstrapModal.hide();
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error creating task', err);
-        this.isSubmitting = false;
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
   parseDescription(desc: string): { isChecklist: boolean; text?: string; items?: any[] } {
     try {
       if (desc && desc.startsWith('{"type":"checklist"')) {
@@ -134,9 +86,218 @@ onAddTask(): void {
     return { isChecklist: false, text: desc };
   }
 
-  onLogout() {
+  // ==========================================
+  // BACKEND INTERACTION LOGIC (CRUD)
+  // ==========================================
+
+  loadTasks(): void {
+    this.isLoading = true;
+    this.taskService.getTasks().subscribe({
+      next: (data) => {
+        this.tasks = data || [];
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error fetching tasks', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openCreateModal(): void {
+    this.isEditMode = false;
+    this.editingTaskId = null;
+    this.isChecklistMode = false;
+    this.taskForm.reset();
+    this.checklistItems.clear();
+
+    this.openModalWindow();
+  }
+
+  onEditTask(task: TaskDto): void {
+    this.isEditMode = true;
+    this.editingTaskId = task.id;
+    this.checklistItems.clear();
+
+    const info = this.parseDescription(task.description);
+
+    const formattedDate = task.dueDate ? task.dueDate.substring(0, 10) : '';
+
+    if (info.isChecklist) {
+      this.isChecklistMode = true;
+      info.items?.forEach(item => {
+        this.checklistItems.push(this.fb.group({
+          text: [item.text, Validators.required],
+          done: [item.done]
+        }));
+      });
+      this.taskForm.patchValue({ title: task.title, description: '', dueDate: formattedDate });
+    } else {
+      this.isChecklistMode = false;
+      this.taskForm.patchValue({ title: task.title, description: info.text, dueDate: formattedDate });
+    }
+
+    this.openModalWindow();
+  }
+
+  onSaveTask(): void {
+    if (this.taskForm.invalid) return;
+
+    this.isSubmitting = true;
+    const formValue = this.taskForm.value;
+    let finalDescription = formValue.description;
+
+    if (this.isChecklistMode) {
+      finalDescription = JSON.stringify({
+        type: 'checklist',
+        items: formValue.checklistItems
+      });
+    }
+
+    if (this.isEditMode && this.editingTaskId !== null) {
+      // CASE: EDITING AN EXISTING TASK
+      const currentTask = this.tasks.find(t => t.id === this.editingTaskId);
+      const payload = {
+        title: formValue.title,
+        description: finalDescription,
+        isCompleted: currentTask ? currentTask.isCompleted : false,
+        dueDate: formValue.dueDate ? formValue.dueDate : null
+      };
+
+      this.taskService.updateTask(this.editingTaskId, payload).subscribe({
+        next: (updatedTask) => {
+          const index = this.tasks.findIndex(t => t.id === this.editingTaskId);
+          if (index !== -1) {
+            this.tasks[index] = updatedTask;
+          }
+          this.closeAndResetModal();
+        },
+        error: (err) => {
+          console.error('Error updating task', err);
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      // CASE: CREATING A NEW TASK
+      const payload = { 
+        title: formValue.title, 
+        description: finalDescription ? finalDescription : '',
+        dueDate: formValue.dueDate ? formValue.dueDate : null 
+      };
+      this.taskService.createTask(payload).subscribe({
+        next: (newTask) => {
+          this.tasks.unshift(newTask); 
+          this.closeAndResetModal();
+        },
+        error: (err) => {
+          console.error('Error creating task', err);
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
+  }
+
+  toggleChecklistItem(task: TaskDto, itemIndex: number): void {
+    const info = this.parseDescription(task.description);
+    
+    if (info.isChecklist && info.items) {
+      info.items[itemIndex].done = !info.items[itemIndex].done;
+
+      const updatedDescription = JSON.stringify({
+        type: 'checklist',
+        items: info.items
+      });
+
+      const updatedTaskPayload = {
+        title: task.title,
+        description: updatedDescription,
+        isCompleted: task.isCompleted
+      };
+
+      const index = this.tasks.findIndex(t => t.id === task.id);
+      if (index !== -1) {
+        this.tasks[index].description = updatedDescription;
+        this.cdr.detectChanges();
+      }
+
+      this.taskService.updateTask(task.id, updatedTaskPayload).subscribe({
+        next: (updatedTask) => {
+          if (index !== -1) {
+            this.tasks[index] = updatedTask;
+            this.cdr.detectChanges();
+          }
+        },
+        error: (err) => {
+          console.error('Error updating checklist item', err);
+          this.loadTasks();
+        }
+      });
+    }
+  }
+
+  toggleTaskCompletion(task: TaskDto): void {
+    const newCompletionStatus = !task.isCompleted;
+
+    const payload = {
+      title: task.title,
+      description: task.description,
+      isCompleted: newCompletionStatus,
+      dueDate: task.dueDate
+    };
+
+    const index = this.tasks.findIndex(t => t.id === task.id);
+    if (index !== -1) {
+      this.tasks[index].isCompleted = newCompletionStatus;
+      this.cdr.detectChanges();
+    }
+
+    this.taskService.updateTask(task.id, payload).subscribe({
+      next: (updatedTask) => {
+        if (index !== -1) {
+          this.tasks[index] = updatedTask;
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.error('Error toggling task completion', err);
+        this.loadTasks();
+      }
+    });
+  }
+
+  // ==========================================
+  // INTERFACE HELPERS (UI METHODS)
+  // ==========================================
+
+  private openModalWindow(): void {
+    const modalElement = document.getElementById('addTaskModal');
+    if (modalElement) {
+      const bootstrapModal = (window as any).bootstrap.Modal.getOrCreateInstance(modalElement);
+      bootstrapModal.show();
+    }
+  }
+
+  private closeAndResetModal(): void {
+    this.taskForm.reset();
+    this.checklistItems.clear();
+    this.isSubmitting = false;
+    this.isEditMode = false;
+    this.editingTaskId = null;
+
+    const modalElement = document.getElementById('addTaskModal');
+    if (modalElement) {
+      const bootstrapModal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (bootstrapModal) bootstrapModal.hide();
+    }
+    this.cdr.detectChanges();
+  }
+
+  onLogout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
 }
-
