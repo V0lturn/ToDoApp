@@ -1,4 +1,5 @@
-﻿using ToDoApp.Core.DTOs.Task;
+﻿using ToDoApp.Core.DTOs;
+using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
 using ToDoApp.Domain.Entities;
 using ToDoApp.Infrastructure.Repositories.Interfaces;
@@ -36,7 +37,8 @@ namespace ToDoApp.Core.Services
                 IsCompleted = created.IsCompleted,
                 CreatedAt = created.CreatedAt,
                 DueDate = created.DueDate,
-                CategoryId = created.CategoryId
+                CategoryId = created.CategoryId,
+                CategoryName = created.Category?.Name
             };
         }
 
@@ -58,6 +60,23 @@ namespace ToDoApp.Core.Services
                 CategoryId = task.CategoryId,
                 CategoryName = task.Category?.Name
             };
+        }
+
+        public async Task<IEnumerable<TaskResponseDto>> GetUserTasksAsync(int userId)
+        {
+            var tasks = await _taskRepository.GetTasksByUserIdAsync(userId);
+
+            return tasks.Select(t => new TaskResponseDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                IsCompleted = t.IsCompleted,
+                CreatedAt = t.CreatedAt,
+                DueDate = t.DueDate,
+                CategoryId = t.CategoryId,
+                CategoryName = t.Category?.Name
+            });
         }
     }
 }

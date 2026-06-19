@@ -2,13 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthResponse, LoginRequest, RegisterRequest } from '../../shared/models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly API = 'https://localhost:7130/api/auth';
-  private readonly TOKEN_KEY = 'token';
-  private readonly USER_KEY = 'username';
+  private readonly API = `${environment.apiUrl}/auth`; 
+  
+  private readonly TOKEN_KEY = 'todo_token'; 
+  private readonly USER_KEY = 'todo_user';
 
   private currentUserSubject = new BehaviorSubject<string | null>(
     localStorage.getItem(this.USER_KEY)

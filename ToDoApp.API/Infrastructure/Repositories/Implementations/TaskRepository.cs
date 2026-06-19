@@ -27,5 +27,14 @@ namespace ToDoApp.Infrastructure.Repositories.Implementations
             await _context.SaveChangesAsync();
             return task;
         }
+
+        public async Task<IEnumerable<TodoTask>> GetTasksByUserIdAsync(int userId)
+        {
+            return await _context.Tasks
+                .Include(t => t.Category)
+                .Where(t => t.UserId == userId)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

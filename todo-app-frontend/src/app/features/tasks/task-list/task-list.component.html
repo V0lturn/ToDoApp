@@ -1,8 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
   <div class="container">
-    <a class="navbar-brand" href="#">
-      <i class="bi bi-check2-square me-2"></i>ToDo App
-    </a>
+    <a class="navbar-brand" href="#">📝 ToDo App</a>
     <div class="d-flex align-items-center">
       <span class="text-light me-3">Welcome, <strong>{{ username }}</strong>!</span>
       <button class="btn btn-outline-light btn-sm" (click)="onLogout()">Logout</button>
@@ -13,23 +11,146 @@
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-10">
-      
+
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-secondary">My Workspace</h2>
-        <button class="btn btn-primary px-4 shadow-sm">+ Add New Task</button>
+        <button class="btn btn-primary px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#addTaskModal" (click)="setMode(false)">
+          + Add New Task
+        </button>
       </div>
 
-      <div class="card p-5 text-center shadow-sm bg-white border-0 rounded-3">
-        <div class="card-body">
-          <div class="mb-3 text-primary">
-            <i class="fa-regular fa-clipboard" style="font-size: 3rem;"></i>
-          </div>
-          <h4 class="text-dark fw-semibold">No tasks created yet</h4>
-          <p class="text-muted mx-auto" style="max-width: 500px;">
-            Your personal dashboard is ready! Click the button above to create your very first task and organize your flow.
-          </p>
+      @if (isLoading) {
+        <div class="text-center my-5">
+          <div class="spinner-border text-primary" role="status"></div>
         </div>
+      } @else {
+        
+        @if (tasks && tasks.length > 0) {
+          <div class="row row-cols-1 row-cols-md-2 g-3">
+            @for (task of tasks; track task.id) {
+              <div class="col">
+                <div class="card shadow-sm h-100 border-start border-4"
+                     [class.border-success]="task.isCompleted"
+                     [class.border-warning]="!task.isCompleted">
+                  <div class="card-body">
+                    <h5 class="card-title fw-bold" [class.text-decoration-line-through]="task.isCompleted">
+                      {{ task.title }}
+                    </h5>
+
+                    @if (parseDescription(task.description).isChecklist) {
+                      <div class="mt-3">
+                        @for (item of parseDescription(task.description).items; track $index) {
+                          <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" [checked]="item.done" disabled>
+                            <label class="form-check-label small" [class.text-decoration-line-through]="item.done">
+                              {{ item.text }}
+                            </label>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="card-text text-muted small mt-2">
+                        {{ parseDescription(task.description).text }}
+                      </p>
+                    }
+
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="card p-5 text-center shadow-sm border-0 rounded-3 bg-white">
+            <div class="card-body">
+              <h4 class="text-dark fw-semibold">No tasks yet</h4>
+              <p class="text-muted mx-auto" style="max-width: 500px;">
+                Click the button above to create your first task.
+              </p>
+            </div>
+          </div>
+        }
+
+      }
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+
+      <div class="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="modal-title fw-bold" id="addTaskModalLabel">Create New Task</h5>
+        
+        <div class="btn-group btn-group-sm ms-auto me-3" role="group">
+          <button type="button" class="btn btn-outline-light" [class.active]="!isChecklistMode" (click)="setMode(false)">
+            <i class="bi bi-file-text me-1"></i> Text
+          </button>
+          <button type="button" class="btn btn-outline-light" [class.active]="isChecklistMode" (click)="setMode(true)">
+            <i class="bi bi-card-checklist me-1"></i> List
+          </button>
+        </div>
+
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
+
+      <form [formGroup]="taskForm" (ngSubmit)="onAddTask()">
+        <div class="modal-body p-4">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Title *</label>
+            <input
+              type="text"
+              class="form-control"
+              formControlName="title"
+              placeholder="What needs to be done?"
+              [class.is-invalid]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched"
+            />
+            <div class="invalid-feedback">Title is required (min 3 characters).</div>
+          </div>
+
+          @if (!isChecklistMode) {
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea
+                class="form-control"
+                formControlName="description"
+                rows="3"
+                placeholder="Add some details..."
+              ></textarea>
+            </div>
+          } @else {
+            <div class="mb-3">
+              <label class="form-label fw-semibold mb-2">List Items</label>
+              
+              <div formArrayName="checklistItems">
+                @for (item of checklistItems.controls; track $index) {
+                  <div [formGroupName]="$index" class="d-flex align-items-center mb-2 animate-fade-in">
+                    <input type="checkbox" class="form-check-input me-2" formControlName="done">
+                    <input type="text" class="form-control form-control-sm" formControlName="text" placeholder="List item...">
+                    <button type="button" class="btn btn-link text-danger p-0 ms-2" (click)="removeChecklistItem($index)">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm mt-2" (click)="addChecklistItem()">
+                + Add Item
+              </button>
+            </div>
+          }
+
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4" [disabled]="taskForm.invalid || isSubmitting">
+            {{ isSubmitting ? 'Creating...' : 'Save Task' }}
+          </button>
+        </div>
+      </form>
 
     </div>
   </div>
