@@ -355,7 +355,14 @@ export class  TaskListComponent implements OnInit {
         this.isAddingCategory = false;
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Error creating category', err)
+      error: (err) => {
+        console.error('Error creating category', err);
+        
+        const errorMessage = err.error?.message || 'Failed to create category. It might already exist.';
+        alert(errorMessage);
+        
+        this.cdr.detectChanges();
+      }
     });
   }
 

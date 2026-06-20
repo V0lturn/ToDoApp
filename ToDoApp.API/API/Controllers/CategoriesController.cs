@@ -27,8 +27,15 @@ namespace ToDoApp.API.API.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var newCategory = await categoryService.CreateCategoryAsync(dto, userId.Value);
-            return CreatedAtAction(nameof(GetAll), newCategory);
+            try
+            {
+                var newCategory = await categoryService.CreateCategoryAsync(dto, userId.Value);
+                return CreatedAtAction(nameof(GetAll), newCategory);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         private int? GetCurrentUserId()
