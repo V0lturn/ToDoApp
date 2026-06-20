@@ -1,30 +1,47 @@
 ﻿using ToDoApp.Core.DTOs.Category;
 using ToDoApp.Core.Interfaces;
-using ToDoApp.Infrastructure.Repositories.Interfaces;
 using ToDoApp.Domain.Entities;
+using ToDoApp.Infrastructure.Repositories.Interfaces;
 
 namespace ToDoApp.Core.Services
 {
-    public class CategoryService : ICategoryService
+    public class CategoryService(ICategoryRepository categoryRepository) : ICategoryService
     {
-        private readonly ICategoryRepository _categoryRepository;
-
-        public CategoryService(ICategoryRepository categoryRepository)
-        {
-            _categoryRepository = categoryRepository;
-        }
-
         public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto, int userId)
         {
-            var category = new Category { Name = dto.Name, UserId = userId };
-            var created = await _categoryRepository.CreateAsync(category);
-            return new CategoryDto { Id = created.Id, Name = created.Name };
+            var normalizedName = dto.Name.Trim();
+
+            var existingCategories = await categoryRepository.GetByUserIdAsync(userId);
+
+            if (existingCategories.Any(c => c.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new Exception($"Category with the name '{normalizedName}' already exists.");
+            }
+
+            var category = new Category
+            {
+                Name = normalizedName,
+                UserId = userId
+            };
+
+            var created = await categoryRepository.CreateAsync(category);
+
+            return new CategoryDto
+            {
+                Id = created.Id,
+                Name = created.Name
+            };
         }
 
         public async Task<IEnumerable<CategoryDto>> GetUserCategoriesAsync(int userId)
         {
-            var categories = await _categoryRepository.GetByUserIdAsync(userId);
-            return categories.Select(c => new CategoryDto { Id = c.Id, Name = c.Name });
+            var categories = await categoryRepository.GetByUserIdAsync(userId);
+
+            return categories.Select(c => new CategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name
+            });
         }
     }
 }
