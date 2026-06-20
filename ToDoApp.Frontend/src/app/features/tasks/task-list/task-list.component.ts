@@ -1,41 +1,50 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { TaskService } from '../../../core/services/task.service'; 
 import { CategoryService } from '../../../core/services/category.service';
 import { TaskDto } from '../../../shared/models/task.model'; 
 import { CategoryDto } from '../../../shared/models/category.model';
 
+interface ChecklistItem {
+  text: string;
+  done: boolean;
+}
+
+interface ParsedDescription {
+  isChecklist: boolean;
+  text?: string;
+  items?: ChecklistItem[];
+}
+
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './task-list.component.html'
 })
-export class  TaskListComponent implements OnInit {
-  // User and list data
+export class TaskListComponent implements OnInit {
+  // Application State Data
   username: string | null = '';
   tasks: TaskDto[] = [];
+  categories: CategoryDto[] = [];
+  selectedCategoryId: number | null = null; 
+  searchText: string = '';
   
-  // Loading and submitting states
+  // Loading and Submitting States
   isLoading = false;
   isSubmitting = false;
+  isAddingCategory = false;
 
-  // Modal window (Form) states
+  // Modal and Form Configuration States
   taskForm: FormGroup;
   isChecklistMode = false;
   isEditMode = false;
   editingTaskId: number | null = null;
 
-  // User and list data
-  categories: CategoryDto[] = [];
-  selectedCategoryId: number | null = null; 
-  isAddingCategory = false;
-  searchText: string = '';
-
-  // Pagination
+  // Server-Side Pagination Metrics
   currentPage = 1;
   pageSize = 4;
   totalPages = 1;
@@ -47,7 +56,7 @@ export class  TaskListComponent implements OnInit {
     private categoryService: CategoryService,
     private router: Router,
     private fb: FormBuilder,
-    private cdr: ChangeDetectorRef
+    private dbCdr: ChangeDetectorRef
   ) {
     this.taskForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(3)]],
@@ -72,13 +81,6 @@ export class  TaskListComponent implements OnInit {
     return this.taskForm.get('checklistItems') as FormArray;
   }
 
-  get filteredTasks(): TaskDto[] {
-    if (this.selectedCategoryId === null) {
-      return this.tasks;
-    }
-    return this.tasks.filter(t => t.categoryId === this.selectedCategoryId);
-  }
-
   setMode(isChecklist: boolean): void {
     this.isChecklistMode = isChecklist;
     if (isChecklist && this.checklistItems.length === 0) {
@@ -100,13 +102,18 @@ export class  TaskListComponent implements OnInit {
     this.checklistItems.removeAt(index);
   }
 
-  parseDescription(desc: string): { isChecklist: boolean; text?: string; items?: any[] } {
+  /**
+   * Parses the combined task description field to detect if it stores standard text or a JSON checklist string.
+   */
+  parseDescription(desc: string): ParsedDescription {
     try {
       if (desc && desc.startsWith('{"type":"checklist"')) {
         const parsed = JSON.parse(desc);
         return { isChecklist: true, items: parsed.items };
       }
-    } catch (e) {}
+    } catch (e) {
+      // Fallback to text mode if JSON parsing completely fails
+    }
     return { isChecklist: false, text: desc };
   }
 
@@ -123,25 +130,25 @@ export class  TaskListComponent implements OnInit {
         this.totalPages = data.totalPages;
         this.totalItems = data.totalItems;
         this.isLoading = false;
-        this.cdr.detectChanges();
+        this.dbCdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching tasks', err);
         this.isLoading = false;
-        this.cdr.detectChanges();
+        this.dbCdr.detectChanges();
       }
     });
   }
 
   loadCategories(): void {
-  this.categoryService.getCategories().subscribe({
-    next: (data) => {
-      this.categories = data || [];
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.error('Error fetching categories', err)
-  });
-}
+    this.categoryService.getCategories().subscribe({
+      next: (data) => {
+        this.categories = data || [];
+        this.dbCdr.detectChanges();
+      },
+      error: (err) => console.error('Error fetching categories', err)
+    });
+  }
 
   openCreateModal(): void {
     this.isEditMode = false;
@@ -159,6 +166,7 @@ export class  TaskListComponent implements OnInit {
 
     const info = this.parseDescription(task.description);
     const formattedDate = task.dueDate ? task.dueDate.substring(0, 10) : '';
+    const selectedCategory = task.categoryId ? task.categoryId : null;
 
     if (info.isChecklist) {
       this.isChecklistMode = true;
@@ -172,14 +180,16 @@ export class  TaskListComponent implements OnInit {
         title: task.title, 
         description: '', 
         dueDate: formattedDate, 
-        categoryId: task.categoryId });
+        categoryId: selectedCategory 
+      });
     } else {
       this.isChecklistMode = false;
       this.taskForm.patchValue({ 
         title: task.title, 
         description: info.text, 
         dueDate: formattedDate, 
-        categoryId: task.categoryId });
+        categoryId: selectedCategory 
+      });
     }
 
     this.openModalWindow();
@@ -205,11 +215,10 @@ export class  TaskListComponent implements OnInit {
       : rawCategory;
 
     const parsedDueDate = formValue.dueDate && formValue.dueDate.trim() !== '' 
-    ? formValue.dueDate 
-    : undefined;
+      ? formValue.dueDate 
+      : undefined;
 
     if (this.isEditMode && this.editingTaskId !== null) {
-      // CASE: EDITING AN EXISTING TASK
       const currentTask = this.tasks.find(t => t.id === this.editingTaskId);
       const payload = {
         title: formValue.title,
@@ -227,11 +236,10 @@ export class  TaskListComponent implements OnInit {
         error: (err) => {
           console.error('Error updating task', err);
           this.isSubmitting = false;
-          this.cdr.detectChanges();
+          this.dbCdr.detectChanges();
         }
       });
     } else {
-      // CASE: CREATING A NEW TASK
       const payload = { 
         title: formValue.title, 
         description: finalDescription ? finalDescription : '',
@@ -243,16 +251,41 @@ export class  TaskListComponent implements OnInit {
         next: () => {
           this.currentPage = 1;
           this.closeAndResetModal();
-          this.loadTasks(); // Загружаем свежие данные
+          this.loadTasks();
         },
         error: (err) => {
           console.error('Error creating task', err);
           this.isSubmitting = false;
-          this.cdr.detectChanges();
+          this.dbCdr.detectChanges();
         }
       });
     }
   }
+
+  onDeleteTask(id: number): void {
+    if (confirm('Are you sure you want to delete this task?')) {
+      const originalTasks = [...this.tasks];
+      this.tasks = this.tasks.filter(t => t.id !== id);
+      this.dbCdr.detectChanges();
+
+      this.taskService.deleteTask(id).subscribe({
+        next: () => {
+          console.log(`Task ${id} deleted successfully`);
+          this.loadTasks();
+        },
+        error: (err) => {
+          console.error('Error deleting task', err);
+          this.tasks = originalTasks;
+          this.dbCdr.detectChanges();
+          alert('Failed to delete the task. Rolled back.');
+        }
+      });
+    }
+  }
+
+  // ==========================================
+  // FILTERS AND SEARCH HANDLERS
+  // ==========================================
 
   toggleChecklistItem(task: TaskDto, itemIndex: number): void {
     const info = this.parseDescription(task.description);
@@ -276,14 +309,14 @@ export class  TaskListComponent implements OnInit {
       const index = this.tasks.findIndex(t => t.id === task.id);
       if (index !== -1) {
         this.tasks[index].description = updatedDescription;
-        this.cdr.detectChanges();
+        this.dbCdr.detectChanges();
       }
 
       this.taskService.updateTask(task.id, updatedTaskPayload).subscribe({
         next: (updatedTask) => {
           if (index !== -1) {
             this.tasks[index] = updatedTask;
-            this.cdr.detectChanges();
+            this.dbCdr.detectChanges();
           }
         },
         error: (err) => {
@@ -308,14 +341,14 @@ export class  TaskListComponent implements OnInit {
     const index = this.tasks.findIndex(t => t.id === task.id);
     if (index !== -1) {
       this.tasks[index].isCompleted = newCompletionStatus;
-      this.cdr.detectChanges();
+      this.dbCdr.detectChanges();
     }
 
     this.taskService.updateTask(task.id, payload).subscribe({
       next: (updatedTask) => {
         if (index !== -1) {
           this.tasks[index] = updatedTask;
-          this.cdr.detectChanges();
+          this.dbCdr.detectChanges();
         }
       },
       error: (err) => {
@@ -325,27 +358,6 @@ export class  TaskListComponent implements OnInit {
     });
   }
 
-  onDeleteTask(id: number): void {
-    if (confirm('Are you sure you want to delete this task?')) {
-      const originalTasks = [...this.tasks];
-      this.tasks = this.tasks.filter(t => t.id !== id);
-      this.cdr.detectChanges();
-
-      this.taskService.deleteTask(id).subscribe({
-        next: () => {
-          console.log(`Task ${id} deleted successfully`);
-          this.loadTasks();
-        },
-        error: (err) => {
-          console.error('Error deleting task', err);
-          this.tasks = originalTasks;
-          this.cdr.detectChanges();
-          alert('Failed to delete the task. Rolled back.');
-        }
-      });
-    }
-}
-
   onAddCategoryDirect(name: string): void {
     if (!name || name.trim().length < 2) return;
 
@@ -353,15 +365,13 @@ export class  TaskListComponent implements OnInit {
       next: (newCat) => {
         this.categories.push(newCat);
         this.isAddingCategory = false;
-        this.cdr.detectChanges();
+        this.dbCdr.detectChanges();
       },
       error: (err) => {
         console.error('Error creating category', err);
-        
         const errorMessage = err.error?.message || 'Failed to create category. It might already exist.';
         alert(errorMessage);
-        
-        this.cdr.detectChanges();
+        this.dbCdr.detectChanges();
       }
     });
   }
@@ -386,7 +396,7 @@ export class  TaskListComponent implements OnInit {
   }
 
   // ==========================================
-  // INTERFACE HELPERS (UI METHODS)
+  // INTERFACE HELPERS (UI COMPONENT ACTIONS)
   // ==========================================
 
   private openModalWindow(): void {
@@ -409,7 +419,7 @@ export class  TaskListComponent implements OnInit {
       const bootstrapModal = (window as any).bootstrap.Modal.getInstance(modalElement);
       if (bootstrapModal) bootstrapModal.hide();
     }
-    this.cdr.detectChanges();
+    this.dbCdr.detectChanges();
   }
 
   onLogout(): void {
