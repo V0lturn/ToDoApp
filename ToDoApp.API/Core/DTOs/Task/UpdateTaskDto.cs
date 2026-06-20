@@ -1,4 +1,4 @@
-﻿namespace ToDoApp.API.Core.DTOs.Task
+﻿namespace ToDoApp.Core.DTOs.Task
 {
     public class UpdateTaskDto
     {

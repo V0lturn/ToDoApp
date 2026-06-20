@@ -1,70 +1,51 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using ToDoApp.API.Core.DTOs.Task;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
+using ToDoApp.Core.Services;
 
-namespace ToDoApp.API.API.Controllers
+namespace ToDoApp.API.Controllers
 {
     [Authorize]                         
     [ApiController]
     [Route("api/[controller]")]
-    public class TasksController : ControllerBase
+    public class TasksController(ITaskService taskService) : ControllerBase
     {
-        private readonly ITaskService _taskService;
-
-        public TasksController(ITaskService taskService)
-        {
-            _taskService = taskService;
-        }
+        private readonly ITaskService _taskService = taskService;
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            if (userIdClaim == null)
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
-
-            int userId = int.Parse(userIdClaim.Value);
-
-            var result = await _taskService.CreateTaskAsync(dto, userId);
+            var result = await _taskService.CreateTaskAsync(dto, userId.Value);
 
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetTasks(
-            [FromQuery] int pageNumber = 1, 
-            [FromQuery] int pageSize = 4, 
-            [FromQuery] int? categoryId = null, 
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 4,
+            [FromQuery] int? categoryId = null,
             [FromQuery] string? searchTerm = null)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
-            if (userIdClaim == null) return Unauthorized();
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            int userId = int.Parse(userIdClaim.Value);
-
-            var result = await _taskService.GetUserTasksPagedAsync(userId, pageNumber, pageSize, categoryId, searchTerm);
+            var result = await _taskService.GetUserTasksPagedAsync(userId.Value, pageNumber, pageSize, categoryId, searchTerm);
             return Ok(result);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            int userId = int.Parse(userIdClaim.Value);
-
-            var task = await _taskService.GetByIdAsync(id, userId);
-
+            var task = await _taskService.GetByIdAsync(id, userId.Value);
             if (task is null)
             {
                 return NotFound(new { message = $"Task with ID {id} not found." });
@@ -74,18 +55,12 @@ namespace ToDoApp.API.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<TaskResponseDto>> Update(int id, [FromBody] UpdateTaskDto dto)
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateTaskDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            int userId = int.Parse(userIdClaim.Value);
-
-            var result = await _taskService.UpdateTaskAsync(id, dto, userId);
-
+            var result = await _taskService.UpdateTaskAsync(id, dto, userId.Value);
             if (result is null)
             {
                 return NotFound(new { message = $"Task with ID {id} not found or access denied." });
@@ -97,22 +72,28 @@ namespace ToDoApp.API.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            int userId = int.Parse(userIdClaim.Value);
-
-            var isDeleted = await _taskService.DeleteTaskAsync(id, userId);
-
+            var isDeleted = await _taskService.DeleteTaskAsync(id, userId.Value);
             if (!isDeleted)
             {
                 return NotFound(new { message = $"Task with ID {id} not found or access denied." });
             }
 
             return NoContent();
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
+
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return userId;
+            }
+
+            return null;
         }
     }
 }
