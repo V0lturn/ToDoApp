@@ -5,25 +5,21 @@ using ToDoApp.Infrastructure.Data;
 
 namespace ToDoApp.Infrastructure.Repositories.Implementations
 {
-    public class CategoryRepository : ICategoryRepository
+    public class CategoryRepository(AppDbContext context) : ICategoryRepository
     {
-        private readonly AppDbContext _context;
-
-        public CategoryRepository (AppDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<Category> CreateAsync(Category category)
         {
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
+            context.Categories.Add(category);
+            await context.SaveChangesAsync();
             return category;
         }
 
         public async Task<IEnumerable<Category>> GetByUserIdAsync(int userId)
         {
-            return await _context.Categories.Where(c => c.UserId == userId).ToListAsync();
+            return await context.Categories
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
         }
     }
 }
