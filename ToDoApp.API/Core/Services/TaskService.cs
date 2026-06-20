@@ -6,20 +6,13 @@ using ToDoApp.Infrastructure.Repositories.Interfaces;
 
 namespace ToDoApp.Core.Services
 {
-    public class TaskService : ITaskService
+    public class TaskService(ITaskRepository taskRepository) : ITaskService
     {
-        private readonly ITaskRepository _taskRepository;
-
-        public TaskService(ITaskRepository taskRepository)
-        {
-            _taskRepository = taskRepository;
-        }
-
         public async Task<TaskResponseDto> CreateTaskAsync(CreateTaskDto dto, int userId)
         {
             var task = new TodoTask
             {
-                Title = dto.Title,
+                Title = dto.Title.Trim(),
                 Description = dto.Description ?? string.Empty,
                 DueDate = dto.DueDate,
                 CategoryId = dto.CategoryId,
@@ -27,56 +20,24 @@ namespace ToDoApp.Core.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            var created = await _taskRepository.CreateAsync(task);
+            var created = await taskRepository.CreateAsync(task);
 
-            return new TaskResponseDto
-            {
-                Id = created.Id,
-                Title = created.Title,
-                Description = created.Description,
-                IsCompleted = created.IsCompleted,
-                CreatedAt = created.CreatedAt,
-                DueDate = created.DueDate,
-                CategoryId = created.CategoryId,
-                CategoryName = created.Category?.Name
-            };
+            return MapToResponseDto(created);
         }
 
         public async Task<TaskResponseDto?> GetByIdAsync(int id, int userId)
         {
-            var task = await _taskRepository.GetByIdAsync(id, userId);
+            var task = await taskRepository.GetByIdAsync(id, userId);
 
-            if (task is null)
-                return null;
-
-            return new TaskResponseDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                IsCompleted = task.IsCompleted,
-                CreatedAt = task.CreatedAt,
-                DueDate = task.DueDate,
-                CategoryId = task.CategoryId,
-                CategoryName = task.Category?.Name
-            };
+            return task is null ? null : MapToResponseDto(task);
         }
 
         public async Task<PagedResponseDto<TaskResponseDto>> GetUserTasksPagedAsync(
             int userId, int pageNumber, int pageSize, int? categoryId, string? searchTerm)
         {
-            var (tasks, totalCount) = await _taskRepository.GetTasksByUserIdPagedAsync(userId, pageNumber, pageSize, categoryId, searchTerm);
-            var dtos = tasks.Select(t => new TaskResponseDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                Description = t.Description,
-                IsCompleted = t.IsCompleted,
-                CreatedAt = t.CreatedAt,
-                DueDate = t.DueDate,
-                CategoryId = t.CategoryId,
-                CategoryName = t.Category?.Name
-            });
+            var (tasks, totalCount) = await taskRepository.GetTasksByUserIdPagedAsync(userId, pageNumber, pageSize, categoryId, searchTerm);
+
+            var dtos = tasks.Select(MapToResponseDto);
 
             return new PagedResponseDto<TaskResponseDto>
             {
@@ -90,43 +51,41 @@ namespace ToDoApp.Core.Services
 
         public async Task<TaskResponseDto?> UpdateTaskAsync(int id, UpdateTaskDto dto, int userId)
         {
-            var task = await _taskRepository.GetByIdAsync(id, userId);
+            var task = await taskRepository.GetByIdAsync(id, userId);
+            if (task is null) return null;
 
-            if (task is null)
-                return null;
-
-            task.Title = dto.Title;
+            task.Title = dto.Title.Trim();
             task.Description = dto.Description;
             task.IsCompleted = dto.IsCompleted;
             task.DueDate = dto.DueDate;
             task.CategoryId = dto.CategoryId;
 
-            var updated = await _taskRepository.UpdateAsync(task);
+            var updated = await taskRepository.UpdateAsync(task);
 
-            if (updated is null)
-                return null;
-
-            return new TaskResponseDto
-            {
-                Id = updated.Id,
-                Title = updated.Title,
-                Description = updated.Description,
-                IsCompleted = updated.IsCompleted,
-                CreatedAt = updated.CreatedAt,
-                DueDate = updated.DueDate,
-                CategoryId = updated.CategoryId,
-                CategoryName = updated.Category?.Name
-            };
+            return updated is null ? null : MapToResponseDto(updated);
         }
 
         public async Task<bool> DeleteTaskAsync(int id, int userId)
         {
-            var task = await _taskRepository.GetByIdAsync(id, userId);
+            var task = await taskRepository.GetByIdAsync(id, userId);
+            if (task is null) return false;
 
-            if (task is null)
-                return false;
+            return await taskRepository.DeleteAsync(task);
+        }
 
-            return await _taskRepository.DeleteAsync(task);
+        private static TaskResponseDto MapToResponseDto(TodoTask task)
+        {
+            return new TaskResponseDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                IsCompleted = task.IsCompleted,
+                CreatedAt = task.CreatedAt,
+                DueDate = task.DueDate,
+                CategoryId = task.CategoryId,
+                CategoryName = task.Category?.Name
+            };
         }
     }
 }
