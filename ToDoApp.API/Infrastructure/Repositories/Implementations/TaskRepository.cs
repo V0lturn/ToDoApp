@@ -28,13 +28,26 @@ namespace ToDoApp.Infrastructure.Repositories.Implementations
             return task;
         }
 
-        public async Task<IEnumerable<TodoTask>> GetTasksByUserIdAsync(int userId)
+        public async Task<(IEnumerable<TodoTask> Items, int TotalCount)> GetTasksByUserIdPagedAsync(int userId, int pageNumber, int pageSize, int? categoryId)
         {
-            return await _context.Tasks
+            var query = _context.Tasks
                 .Include(t => t.Category)
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId == userId);
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(t => t.CategoryId == categoryId.Value);
+            }
+
+            int totalCount = await query.CountAsync();
+
+            var items = await query
                 .OrderByDescending(t => t.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<TodoTask?> UpdateAsync(TodoTask task)

@@ -1,4 +1,5 @@
-﻿using ToDoApp.API.Core.DTOs.Task;
+﻿using ToDoApp.API.Core.DTOs.Pagination;
+using ToDoApp.API.Core.DTOs.Task;
 using ToDoApp.Core.DTOs;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
@@ -63,11 +64,11 @@ namespace ToDoApp.Core.Services
             };
         }
 
-        public async Task<IEnumerable<TaskResponseDto>> GetUserTasksAsync(int userId)
+        public async Task<PagedResponseDto<TaskResponseDto>> GetUserTasksPagedAsync(int userId, int pageNumber, int pageSize, int? categoryId)
         {
-            var tasks = await _taskRepository.GetTasksByUserIdAsync(userId);
+            var (tasks, totalCount) = await _taskRepository.GetTasksByUserIdPagedAsync(userId, pageNumber, pageSize, categoryId);
 
-            return tasks.Select(t => new TaskResponseDto
+            var dtos = tasks.Select(t => new TaskResponseDto
             {
                 Id = t.Id,
                 Title = t.Title,
@@ -78,6 +79,15 @@ namespace ToDoApp.Core.Services
                 CategoryId = t.CategoryId,
                 CategoryName = t.Category?.Name
             });
+
+            return new PagedResponseDto<TaskResponseDto>
+            {
+                Items = dtos,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalItems = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
         }
 
         public async Task<TaskResponseDto?> UpdateTaskAsync(int id, UpdateTaskDto dto, int userId)

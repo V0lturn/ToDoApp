@@ -1,4 +1,6 @@
-﻿using ToDoApp.Domain.Entities;
+﻿using ToDoApp.API.Core.DTOs.Pagination;
+using ToDoApp.Core.DTOs.Task;
+using ToDoApp.Domain.Entities;
 
 namespace ToDoApp.Infrastructure.Repositories.Interfaces
 {
@@ -6,7 +8,7 @@ namespace ToDoApp.Infrastructure.Repositories.Interfaces
     {
         Task<TodoTask?> GetByIdAsync(int id, int userId);
         Task<TodoTask> CreateAsync(TodoTask task);
-        Task<IEnumerable<TodoTask>> GetTasksByUserIdAsync(int userId);
+        Task<(IEnumerable<TodoTask> Items, int TotalCount)> GetTasksByUserIdPagedAsync(int userId, int pageNumber, int pageSize, int? categoryId);
         Task<TodoTask?> UpdateAsync(TodoTask task);
         Task<bool> DeleteAsync(TodoTask task);
     }

@@ -23,3 +23,13 @@ export interface UpdateTaskDto {
   dueDate?: string;
   categoryId?: number;
 }
+
+export interface PagedResponse<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  totalItems: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}

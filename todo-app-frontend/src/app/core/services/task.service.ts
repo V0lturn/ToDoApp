@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { CreateTaskDto, TaskDto, UpdateTaskDto } from '../../shared/models/task.model';
+import { CreateTaskDto, PagedResponse, TaskDto, UpdateTaskDto } from '../../shared/models/task.model';
 
 @Injectable({
   providedIn: 'root'
@@ -12,8 +12,16 @@ export class TaskService {
 
   constructor(private http: HttpClient) {}
 
-  getTasks(): Observable<TaskDto[]> {
-    return this.http.get<TaskDto[]>(this.API);
+  getTasks(page: number, pageSize: number, categoryId: number | null): Observable<PagedResponse<TaskDto>> {
+    let params = new HttpParams()
+      .set('pageNumber', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    if (categoryId !== null) {
+      params = params.set('categoryId', categoryId.toString());
+    }
+
+    return this.http.get<PagedResponse<TaskDto>>(this.API, { params });
   }
 
   createTask(dto: CreateTaskDto): Observable<TaskDto> {

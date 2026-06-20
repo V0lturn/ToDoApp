@@ -34,6 +34,12 @@ export class  TaskListComponent implements OnInit {
   selectedCategoryId: number | null = null; 
   isAddingCategory = false;
 
+  // Pagination
+  currentPage = 1;
+  pageSize = 4;
+  totalPages = 1;
+  totalItems = 0;
+
   constructor(
     private authService: AuthService, 
     private taskService: TaskService,
@@ -66,11 +72,11 @@ export class  TaskListComponent implements OnInit {
   }
 
   get filteredTasks(): TaskDto[] {
-  if (this.selectedCategoryId === null) {
-    return this.tasks;
+    if (this.selectedCategoryId === null) {
+      return this.tasks;
+    }
+    return this.tasks.filter(t => t.categoryId === this.selectedCategoryId);
   }
-  return this.tasks.filter(t => t.categoryId === this.selectedCategoryId);
-}
 
   setMode(isChecklist: boolean): void {
     this.isChecklistMode = isChecklist;
@@ -109,9 +115,12 @@ export class  TaskListComponent implements OnInit {
 
   loadTasks(): void {
     this.isLoading = true;
-    this.taskService.getTasks().subscribe({
+    this.taskService.getTasks(this.currentPage, this.pageSize, this.selectedCategoryId).subscribe({
       next: (data) => {
-        this.tasks = data || [];
+        this.tasks = data.items || [];
+        this.currentPage = data.pageNumber;
+        this.totalPages = data.totalPages;
+        this.totalItems = data.totalItems;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -148,7 +157,6 @@ export class  TaskListComponent implements OnInit {
     this.checklistItems.clear();
 
     const info = this.parseDescription(task.description);
-
     const formattedDate = task.dueDate ? task.dueDate.substring(0, 10) : '';
 
     if (info.isChecklist) {
@@ -190,24 +198,30 @@ export class  TaskListComponent implements OnInit {
       });
     }
 
+    const rawCategory = formValue.categoryId;
+    const parsedCategoryId = (rawCategory === 'null' || rawCategory === '' || rawCategory === null) 
+      ? null 
+      : rawCategory;
+
+    const parsedDueDate = formValue.dueDate && formValue.dueDate.trim() !== '' 
+    ? formValue.dueDate 
+    : undefined;
+
     if (this.isEditMode && this.editingTaskId !== null) {
       // CASE: EDITING AN EXISTING TASK
       const currentTask = this.tasks.find(t => t.id === this.editingTaskId);
       const payload = {
         title: formValue.title,
-        description: finalDescription,
+        description: finalDescription ? finalDescription : '',
         isCompleted: currentTask ? currentTask.isCompleted : false,
-        dueDate: formValue.dueDate ? formValue.dueDate : null,
-        categoryId: formValue.categoryId ? formValue.categoryId : null
+        dueDate: parsedDueDate,
+        categoryId: parsedCategoryId
       };
 
       this.taskService.updateTask(this.editingTaskId, payload).subscribe({
-        next: (updatedTask) => {
-          const index = this.tasks.findIndex(t => t.id === this.editingTaskId);
-          if (index !== -1) {
-            this.tasks[index] = updatedTask;
-          }
+        next: () => {
           this.closeAndResetModal();
+          this.loadTasks();
         },
         error: (err) => {
           console.error('Error updating task', err);
@@ -220,13 +234,15 @@ export class  TaskListComponent implements OnInit {
       const payload = { 
         title: formValue.title, 
         description: finalDescription ? finalDescription : '',
-        dueDate: formValue.dueDate ? formValue.dueDate : null,
-        categoryId: formValue.categoryId ? formValue.categoryId : null 
+        dueDate: parsedDueDate,
+        categoryId: parsedCategoryId 
       };
+
       this.taskService.createTask(payload).subscribe({
-        next: (newTask) => {
-          this.tasks.unshift(newTask); 
+        next: () => {
+          this.currentPage = 1;
           this.closeAndResetModal();
+          this.loadTasks(); // Загружаем свежие данные
         },
         error: (err) => {
           console.error('Error creating task', err);
@@ -317,6 +333,7 @@ export class  TaskListComponent implements OnInit {
       this.taskService.deleteTask(id).subscribe({
         next: () => {
           console.log(`Task ${id} deleted successfully`);
+          this.loadTasks();
         },
         error: (err) => {
           console.error('Error deleting task', err);
@@ -339,6 +356,18 @@ export class  TaskListComponent implements OnInit {
       },
       error: (err) => console.error('Error creating category', err)
     });
+  }
+
+  selectCategory(categoryId: number | null): void {
+    this.selectedCategoryId = categoryId;
+    this.currentPage = 1;
+    this.loadTasks();
+  }
+
+  onPageChange(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.loadTasks();
   }
 
   // ==========================================
