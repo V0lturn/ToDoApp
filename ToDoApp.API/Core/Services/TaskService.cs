@@ -64,10 +64,10 @@ namespace ToDoApp.Core.Services
             };
         }
 
-        public async Task<PagedResponseDto<TaskResponseDto>> GetUserTasksPagedAsync(int userId, int pageNumber, int pageSize, int? categoryId)
+        public async Task<PagedResponseDto<TaskResponseDto>> GetUserTasksPagedAsync(
+            int userId, int pageNumber, int pageSize, int? categoryId, string? searchTerm)
         {
-            var (tasks, totalCount) = await _taskRepository.GetTasksByUserIdPagedAsync(userId, pageNumber, pageSize, categoryId);
-
+            var (tasks, totalCount) = await _taskRepository.GetTasksByUserIdPagedAsync(userId, pageNumber, pageSize, categoryId, searchTerm);
             var dtos = tasks.Select(t => new TaskResponseDto
             {
                 Id = t.Id,

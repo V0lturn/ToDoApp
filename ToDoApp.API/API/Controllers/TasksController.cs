@@ -37,14 +37,18 @@ namespace ToDoApp.API.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetTasks([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 4, [FromQuery] int? categoryId = null)
+        public async Task<IActionResult> GetTasks(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 4, 
+            [FromQuery] int? categoryId = null, 
+            [FromQuery] string? searchTerm = null)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
             if (userIdClaim == null) return Unauthorized();
 
             int userId = int.Parse(userIdClaim.Value);
 
-            var result = await _taskService.GetUserTasksPagedAsync(userId, pageNumber, pageSize, categoryId);
+            var result = await _taskService.GetUserTasksPagedAsync(userId, pageNumber, pageSize, categoryId, searchTerm);
             return Ok(result);
         }
 

@@ -28,26 +28,34 @@ namespace ToDoApp.Infrastructure.Repositories.Implementations
             return task;
         }
 
-        public async Task<(IEnumerable<TodoTask> Items, int TotalCount)> GetTasksByUserIdPagedAsync(int userId, int pageNumber, int pageSize, int? categoryId)
-        {
-            var query = _context.Tasks
-                .Include(t => t.Category)
-                .Where(t => t.UserId == userId);
-
-            if (categoryId.HasValue)
+        public async Task<(IEnumerable<TodoTask> Items, int TotalCount)> GetTasksByUserIdPagedAsync(
+            int userId, int pageNumber, int pageSize, int? categoryId, string? searchTerm)
             {
-                query = query.Where(t => t.CategoryId == categoryId.Value);
-            }
+                var query = _context.Tasks
+                    .Include(t => t.Category)
+                    .Where(t => t.UserId == userId);
 
-            int totalCount = await query.CountAsync();
+                if (categoryId.HasValue)
+                {
+                    query = query.Where(t => t.CategoryId == categoryId.Value);
+                }
 
-            var items = await query
-                .OrderByDescending(t => t.CreatedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    var term = searchTerm.Trim().ToLower();
+                    query = query.Where(t => t.Title.ToLower().Contains(term) ||
+                                             t.Description.ToLower().Contains(term));
+                }
 
-            return (items, totalCount);
+                int totalCount = await query.CountAsync();
+
+                var items = await query
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return (items, totalCount);
         }
 
         public async Task<TodoTask?> UpdateAsync(TodoTask task)

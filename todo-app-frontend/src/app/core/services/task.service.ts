@@ -12,13 +12,17 @@ export class TaskService {
 
   constructor(private http: HttpClient) {}
 
-  getTasks(page: number, pageSize: number, categoryId: number | null): Observable<PagedResponse<TaskDto>> {
+  getTasks(page: number, pageSize: number, categoryId: number | null, searchTerm: string | null): Observable<PagedResponse<TaskDto>> {
     let params = new HttpParams()
       .set('pageNumber', page.toString())
       .set('pageSize', pageSize.toString());
 
     if (categoryId !== null) {
       params = params.set('categoryId', categoryId.toString());
+    }
+
+    if (searchTerm && searchTerm.trim() !== '') {
+      params = params.set('searchTerm', searchTerm.trim());
     }
 
     return this.http.get<PagedResponse<TaskDto>>(this.API, { params });

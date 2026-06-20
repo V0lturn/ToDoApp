@@ -33,6 +33,7 @@ export class  TaskListComponent implements OnInit {
   categories: CategoryDto[] = [];
   selectedCategoryId: number | null = null; 
   isAddingCategory = false;
+  searchText: string = '';
 
   // Pagination
   currentPage = 1;
@@ -115,7 +116,7 @@ export class  TaskListComponent implements OnInit {
 
   loadTasks(): void {
     this.isLoading = true;
-    this.taskService.getTasks(this.currentPage, this.pageSize, this.selectedCategoryId).subscribe({
+    this.taskService.getTasks(this.currentPage, this.pageSize, this.selectedCategoryId, this.searchText).subscribe({
       next: (data) => {
         this.tasks = data.items || [];
         this.currentPage = data.pageNumber;
@@ -361,12 +362,19 @@ export class  TaskListComponent implements OnInit {
   selectCategory(categoryId: number | null): void {
     this.selectedCategoryId = categoryId;
     this.currentPage = 1;
+    this.searchText = '';
     this.loadTasks();
   }
 
   onPageChange(page: number): void {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
+    this.loadTasks();
+  }
+
+  onSearch(value: string): void {
+    this.searchText = value;
+    this.currentPage = 1;
     this.loadTasks();
   }
 
