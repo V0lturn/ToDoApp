@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
-using ToDoApp.Core.Services;
 
 namespace ToDoApp.API.Controllers
 {
@@ -12,15 +11,13 @@ namespace ToDoApp.API.Controllers
     [Route("api/[controller]")]
     public class TasksController(ITaskService taskService) : ControllerBase
     {
-        private readonly ITaskService _taskService = taskService;
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
         {
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var result = await _taskService.CreateTaskAsync(dto, userId.Value);
+            var result = await taskService.CreateTaskAsync(dto, userId.Value);
 
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
@@ -35,7 +32,7 @@ namespace ToDoApp.API.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var result = await _taskService.GetUserTasksPagedAsync(userId.Value, pageNumber, pageSize, categoryId, searchTerm);
+            var result = await taskService.GetUserTasksPagedAsync(userId.Value, pageNumber, pageSize, categoryId, searchTerm);
             return Ok(result);
         }
 
@@ -45,7 +42,7 @@ namespace ToDoApp.API.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var task = await _taskService.GetByIdAsync(id, userId.Value);
+            var task = await taskService.GetByIdAsync(id, userId.Value);
             if (task is null)
             {
                 return NotFound(new { message = $"Task with ID {id} not found." });
@@ -60,7 +57,7 @@ namespace ToDoApp.API.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var result = await _taskService.UpdateTaskAsync(id, dto, userId.Value);
+            var result = await taskService.UpdateTaskAsync(id, dto, userId.Value);
             if (result is null)
             {
                 return NotFound(new { message = $"Task with ID {id} not found or access denied." });
@@ -75,7 +72,7 @@ namespace ToDoApp.API.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-            var isDeleted = await _taskService.DeleteTaskAsync(id, userId.Value);
+            var isDeleted = await taskService.DeleteTaskAsync(id, userId.Value);
             if (!isDeleted)
             {
                 return NotFound(new { message = $"Task with ID {id} not found or access denied." });

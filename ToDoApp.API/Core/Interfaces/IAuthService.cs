@@ -1,6 +1,6 @@
-﻿using ToDoApp.API.Core.DTOs.Auth;
+﻿using ToDoApp.Core.DTOs.Auth;
 
-namespace ToDoApp.API.Core.Interfaces
+namespace ToDoApp.Core.Interfaces
 {
     public interface IAuthService
     {
