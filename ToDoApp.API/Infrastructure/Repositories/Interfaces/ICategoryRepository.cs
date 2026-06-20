@@ -1,6 +1,6 @@
 ﻿using ToDoApp.Domain.Entities;
 
-namespace ToDoApp.API.Infrastructure.Repositories.Interfaces
+namespace ToDoApp.Infrastructure.Repositories.Interfaces
 {
     public interface ICategoryRepository
     {

@@ -8,22 +8,13 @@ using ToDoApp.Core.Interfaces;
 using ToDoApp.Domain.Entities;
 using ToDoApp.Infrastructure.Data;
 
-namespace ToDoApp.API.Core.Services
+namespace ToDoApp.Core.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService(AppDbContext context, IConfiguration config) : IAuthService
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _config;
-
-        public AuthService(AppDbContext context, IConfiguration config)
-        {
-            _context = context;
-            _config = config;
-        }
-
         public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
+            if (await context.Users.AnyAsync(u => u.Username == dto.Username))
                 throw new Exception("Username already in use");
 
             var user = new User
@@ -33,15 +24,15 @@ namespace ToDoApp.API.Core.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
 
             return GenerateToken(user);
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
         {
-            var user = await _context.Users
+            var user = await context.Users
                 .FirstOrDefaultAsync(u => u.Username == dto.Username);
 
             if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
@@ -50,9 +41,9 @@ namespace ToDoApp.API.Core.Services
             return GenerateToken(user);
         }
 
-        private AuthResponseDto GenerateToken(User user)
+        private AuthResponseDto GenerateToken(User user)                                
         {
-            var jwtSettings = _config.GetSection("JwtSettings");
+            var jwtSettings = config.GetSection("JwtSettings");
 
             var secretKey = jwtSettings["SecretKey"]
                 ?? throw new InvalidOperationException("JWT SecretKey не настроен в appsettings.json");
@@ -60,7 +51,7 @@ namespace ToDoApp.API.Core.Services
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
             var expiryMinutesStr = jwtSettings["ExpiryMinutes"];
-            var expiryMinutes = string.IsNullOrEmpty(expiryMinutesStr) ? 60 : double.Parse(expiryMinutesStr);
+            var expiryMinutes = double.TryParse(expiryMinutesStr, out var minutes) ? minutes : 60;
             var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
 
             var claims = new[]

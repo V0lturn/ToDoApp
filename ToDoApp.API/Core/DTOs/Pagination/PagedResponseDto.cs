@@ -1,4 +1,4 @@
-﻿namespace ToDoApp.API.Core.DTOs.Pagination
+﻿namespace ToDoApp.Core.DTOs.Pagination
 {
     public class PagedResponseDto<T>
     {

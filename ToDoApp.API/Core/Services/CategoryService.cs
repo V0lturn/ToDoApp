@@ -1,10 +1,9 @@
-﻿using ToDoApp.API.Core.DTOs.Category;
-using ToDoApp.API.Core.Interfaces;
-using ToDoApp.API.Infrastructure.Repositories.Interfaces;
-using ToDoApp.Domain.Entities;
+﻿using ToDoApp.Core.DTOs.Category;
+using ToDoApp.Core.Interfaces;
 using ToDoApp.Infrastructure.Repositories.Interfaces;
+using ToDoApp.Domain.Entities;
 
-namespace ToDoApp.API.Core.Services
+namespace ToDoApp.Core.Services
 {
     public class CategoryService : ICategoryService
     {

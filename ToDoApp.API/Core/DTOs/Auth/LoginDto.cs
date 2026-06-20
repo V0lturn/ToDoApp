@@ -1,4 +1,4 @@
-﻿namespace ToDoApp.API.Core.DTOs.Auth
+﻿namespace ToDoApp.Core.DTOs.Auth
 {
     public class LoginDto
     {

@@ -2,16 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using ToDoApp.API.Core.Interfaces;
-using ToDoApp.API.Core.Services;
-using ToDoApp.API.Infrastructure.Repositories.Implementations;
-using ToDoApp.API.Infrastructure.Repositories.Interfaces;
 using ToDoApp.Core.Interfaces;
 using ToDoApp.Core.Services;
-using ToDoApp.Domain.Entities;
-using ToDoApp.Infrastructure.Data;
 using ToDoApp.Infrastructure.Repositories.Implementations;
 using ToDoApp.Infrastructure.Repositories.Interfaces;
+using ToDoApp.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
