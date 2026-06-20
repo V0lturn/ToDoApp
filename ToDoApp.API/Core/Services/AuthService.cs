@@ -3,8 +3,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using ToDoApp.API.Core.DTOs.Auth;
-using ToDoApp.API.Core.Interfaces;
+using ToDoApp.Core.DTOs.Auth;
+using ToDoApp.Core.Interfaces;
 using ToDoApp.Domain.Entities;
 using ToDoApp.Infrastructure.Data;
 

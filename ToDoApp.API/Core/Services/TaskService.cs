@@ -1,6 +1,4 @@
-﻿using ToDoApp.API.Core.DTOs.Pagination;
-using ToDoApp.API.Core.DTOs.Task;
-using ToDoApp.Core.DTOs;
+﻿using ToDoApp.Core.DTOs.Pagination;
 using ToDoApp.Core.DTOs.Task;
 using ToDoApp.Core.Interfaces;
 using ToDoApp.Domain.Entities;

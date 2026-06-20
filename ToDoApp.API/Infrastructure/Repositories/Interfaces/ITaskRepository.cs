@@ -1,6 +1,4 @@
-﻿using ToDoApp.API.Core.DTOs.Pagination;
-using ToDoApp.Core.DTOs.Task;
-using ToDoApp.Domain.Entities;
+﻿using ToDoApp.Domain.Entities;
 
 namespace ToDoApp.Infrastructure.Repositories.Interfaces
 {

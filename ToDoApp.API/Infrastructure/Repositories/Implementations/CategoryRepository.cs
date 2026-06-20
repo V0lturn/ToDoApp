@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ToDoApp.API.Infrastructure.Repositories.Interfaces;
+using ToDoApp.Infrastructure.Repositories.Interfaces;
 using ToDoApp.Domain.Entities;
 using ToDoApp.Infrastructure.Data;
 
-namespace ToDoApp.API.Infrastructure.Repositories.Implementations
+namespace ToDoApp.Infrastructure.Repositories.Implementations
 {
     public class CategoryRepository : ICategoryRepository
     {
