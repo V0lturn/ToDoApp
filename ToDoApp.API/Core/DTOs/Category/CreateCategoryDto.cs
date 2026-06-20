@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ToDoApp.API.Core.DTOs.Category
+namespace ToDoApp.Core.DTOs.Category
 {
     public class CreateCategoryDto
     {

@@ -1,6 +1,6 @@
-﻿using ToDoApp.API.Core.DTOs.Category;
+﻿using ToDoApp.Core.DTOs.Category;
 
-namespace ToDoApp.API.Core.Interfaces
+namespace ToDoApp.Core.Interfaces
 {
     public interface ICategoryService
     {
