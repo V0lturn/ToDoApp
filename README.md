@@ -62,19 +62,3 @@ Update-Database
 ```
 
 ---
-
-## Test Credentials
-
-Use the following account to test the application:
-
-**Username**
-
-```text
-FirstAccount
-```
-
-**Password**
-
-```text
-SomePassword123
-```
